@@ -1,0 +1,10 @@
+conda create --name pytorch-xpu python=3.12
+conda activate pytorch-xpu
+conda install pip
+# install intel graphics driver(s), find link here: https://pytorch-extension.intel.com/installation
+# install MS visual c++ redistributable, find link here: https://pytorch-extension.intel.com/installation
+conda install libuv
+python -m pip install torch==2.5.1+cxx11.abi torchvision==0.20.1+cxx11.abi torchaudio==2.5.1+cxx11.abi intel-extension-for-pytorch==2.5.10+xpu --extra-index-url https://pytorch-extension.intel.com/release-whl/stable/mtl/us/
+pip uninstall numpy
+pip install "numpy<2.0"
+pip install coloredlogs flatbuffers protobuf
