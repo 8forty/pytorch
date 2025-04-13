@@ -24,7 +24,7 @@ class NeuralNetwork(nn.Module):
         return logits
 
 
-def train(dataloader, model, loss_fn, optimizer, device):
+def train(dataloader, model, loss_fn, optimizer, device) -> (float, int, int):
     size = len(dataloader.dataset)
     model.train()
     for batch, (X, y) in enumerate(dataloader):
@@ -39,12 +39,12 @@ def train(dataloader, model, loss_fn, optimizer, device):
         optimizer.step()
         optimizer.zero_grad()
 
-        if batch % 100 == 0:
+        if batch % 300 == 0:
             loss, current = loss.item(), (batch + 1) * len(X)
-            print(f'loss: {loss:>7f}  [{current:>5d}/{size:>5d}]')
+            yield loss, current, size
 
 
-def test(dataloader, model, loss_fn, device):
+def test(dataloader, model, loss_fn, device) -> (float, float):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     model.eval()
@@ -57,26 +57,33 @@ def test(dataloader, model, loss_fn, device):
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    print(f'Test Results: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n')
+
+    return correct, test_loss
 
 
-def pick_device() -> torch.device:
-    device: torch.device = torch.device('cpu')
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-    elif torch.xpu.is_available():
-        import intel_extension_for_pytorch as ipex
+def pick_device(device_name: str | None) -> torch.device:
+    if device_name is None:
+        device: torch.device = torch.device('cpu')
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+        elif torch.xpu.is_available():
+            import intel_extension_for_pytorch as ipex
 
-        device = torch.device('xpu')
+            device = torch.device('xpu')
+        else:
+            raise ValueError('No device available!')
+    else:
+        device = torch.device(device_name)
+
     return device
 
 
-def go():
-    device = pick_device()
+def go(epochs: int = 5, batch_size: int = 64, device_name: str | None = None):
+    device = pick_device(device_name)
     torch.set_default_device(device)
     print(f'device: {torch.get_default_device()}')
 
-    # Download training data from open datasets.
+    # setup training data from open datasets (downloads if necessary)
     training_data = datasets.FashionMNIST(
         root='quickstart_data',
         train=True,
@@ -92,31 +99,33 @@ def go():
         transform=ToTensor(),
     )
 
-    batch_size = 64
-
     # Create data loaders.
     train_dataloader = DataLoader(training_data, batch_size=batch_size)
     test_dataloader = DataLoader(test_data, batch_size=batch_size)
 
-    for X, y in test_dataloader:
-        print(f'Shape of X [N, C, H, W]: {X.shape}')
-        print(f'Shape of y: {y.shape} {y.dtype}')
-        break
+    for t in [('training', train_dataloader), ('testing', test_dataloader)]:
+        for X, y in t[1]:
+            print(f'{t[0]} data: {X.shape}({X.dtype}) / {y.shape}({y.dtype})')
+            break  # we only need one from each tensor
 
     # acc_device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else 'cpu'
     # print(f'accelerator device: {acc_device}')
 
     model = NeuralNetwork().to(device)
-    print(model)
+    print(f'model: {model}')
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
-    epochs = 5
     for t in range(epochs):
         print(f'Epoch {t + 1}\n-------------------------------')
-        train(train_dataloader, model, loss_fn, optimizer, device)
-        test(test_dataloader, model, loss_fn, device)
+        print(f'training:')
+        for i in train(train_dataloader, model, loss_fn, optimizer, device):
+            print(f'  loss: {i[0]:>7f}  [{i[1]:>5d}/{i[2]:>5d}]')
+        results = test(test_dataloader, model, loss_fn, device)
+        print(f'test results: accuracy: {(100 * results[0]):>0.1f}%, avg loss: {results[1]:>8f} \n')
+
+    print(f'on device: {torch.get_default_device()}')
 
 
 go()
