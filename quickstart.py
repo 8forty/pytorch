@@ -123,7 +123,7 @@ def go(epochs: int = 5, batch_size: int = 64, device_name: str | None = None):
         for i in train(train_dataloader, model, loss_fn, optimizer, device):
             print(f'  loss: {i[0]:>7f}  [{i[1]:>5d}/{i[2]:>5d}]')
         results = test(test_dataloader, model, loss_fn, device)
-        print(f'test results: accuracy: {(100 * results[0]):>0.1f}%, avg loss: {results[1]:>8f} \n')
+        print(f'on test data: acc: {(100 * results[0]):>0.1f}%, avg-loss: {results[1]:>3f} \n')
 
     # try some predictions
     classes = [
@@ -146,12 +146,12 @@ def go(epochs: int = 5, batch_size: int = 64, device_name: str | None = None):
             x = x.to(device)
             pred = model(x)
             predicted, actual = classes[pred[0].argmax(0)], classes[y]
-            print(f'Predicted: "{predicted}", Actual: "{actual}"')
+            print(f'prediction: {predicted} ({actual})')
             i += 1
-            if i > 10:
+            if i > 5:
                 break
 
-    print(f'on device: {torch.get_default_device()}')
+    print(f'\ndevice: {torch.get_default_device()}')
 
 
 go(epochs=2)
