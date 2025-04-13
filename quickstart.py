@@ -125,8 +125,34 @@ def go(epochs: int = 5, batch_size: int = 64, device_name: str | None = None):
         results = test(test_dataloader, model, loss_fn, device)
         print(f'test results: accuracy: {(100 * results[0]):>0.1f}%, avg loss: {results[1]:>8f} \n')
 
+    # try some predictions
+    classes = [
+        "T-shirt/top",
+        "Trouser",
+        "Pullover",
+        "Dress",
+        "Coat",
+        "Sandal",
+        "Shirt",
+        "Sneaker",
+        "Bag",
+        "Ankle boot",
+    ]
+
+    model.eval()
+    i = 0
+    for x, y in test_data:
+        with torch.no_grad():
+            x = x.to(device)
+            pred = model(x)
+            predicted, actual = classes[pred[0].argmax(0)], classes[y]
+            print(f'Predicted: "{predicted}", Actual: "{actual}"')
+            i += 1
+            if i > 10:
+                break
+
     print(f'on device: {torch.get_default_device()}')
 
 
-go()
-print('Done!')
+go(epochs=2)
+print('done')
